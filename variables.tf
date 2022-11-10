@@ -3,10 +3,10 @@ variable "project" {
 }
 
 variable "region" {
-  default = "europe-west2" 
+  default = "europe-west2"
 }
 
-variable "zone"  {
+variable "zone" {
   default = "europe-west2-a"
 }
 
