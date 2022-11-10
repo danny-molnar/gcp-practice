@@ -1,19 +1,49 @@
-provider "google" {
-  project = "cr-lab-dmolnar-0911225043"
-  region  = "europe-west2"
-  zone    = "europe-west2-a"
-  credentials = file("../terraform-key.json")
+module "network" {
+  source  = "terraform-google-modules/network/google"
+  version = "5.2.0"
+
+  network_name = "my-vpc-network"
+  project_id   = var.project
+
+  subnets = [
+    {
+      subnet_name   = "subnet-01"
+      subnet_ip     = var.cidr
+      subnet_region = var.region
+    },
+   
+  ]
+
+  secondary_ranges = {
+    subnet-01 = []
+
+  }
 }
 
-resource "google_compute_network" "vpc_network" {
-  name = "terraform-network"
-}
+module "network_routes" {
+  source  = "terraform-google-modules/network/google//modules/routes"
+  version = "5.2.0"
+  network_name = module.network.network_name
+  project_id   = var.project
+  
+   routes = [
+         {
+             name                   = "egress-internet"
+             description            = "route through IGW to access internet"
+             destination_range      = "0.0.0.0/0"
+             tags                   = "egress-inet"
+             next_hop_internet      = "true"
+         },
+       
+     ]
+  }
 
-terraform {
-    #the gcs below refers to google cloud storage, i.e. the backend config will live in a bucket as specified below
-    backend "gcs" {
-        bucket = "terraform-test-cr-lab-dmolnar-0911225043"
-        prefix = "terraform1"
-        credentials = "../terraform-key.json"
-    }
+module "network_fabric-net-firewall" {
+  source  = "terraform-google-modules/network/google//modules/fabric-net-firewall"
+  version = "5.2.0"
+  project_id              = var.project
+  network                 = module.network.network_name
+  internal_ranges_enabled = true
+  internal_ranges         = [var.cidr]
+
 }
